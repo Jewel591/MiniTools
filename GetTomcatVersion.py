@@ -2,12 +2,13 @@
 import requests
 import re
 import sys
+import GetPHPVersion,GetApacheVersion
 
 # 这两行是为了去除"请求 https 站点取消 ssl 认证时控制台的警告信息"
 from requests.packages.urllib3.exceptions import InsecureRequestWarning
 requests.packages.urllib3.disable_warnings(InsecureRequestWarning)
 
-tomcatresult = ["Original Response!"]
+phpversion = ["Original Response!"]
 try:
     targeturl = sys.argv[1]
 except IndexError:
@@ -42,7 +43,7 @@ def IsConnected(url):
 
 def GetTomcatVersion(url):
     global targeturl
-    global tomcatresult
+    global phpversion
 
     def getby404(url):
         global tomcatresult
@@ -91,6 +92,6 @@ def GetTomcatVersion(url):
 
 
 RefactorURL(sys.argv[1])
-print("正在测试目标站点：", targeturl)
+print("正在测试目标站点可访性：", targeturl)
 IsConnected(targeturl)
 GetTomcatVersion(targeturl)

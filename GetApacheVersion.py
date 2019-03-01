@@ -36,52 +36,51 @@ def IsConnected(url):
         sys.exit(0)
 
 
-def GetPHPVersion(url):
+def GetApacheVersion(url):
     global targeturl
     global phpversion
 
     def returnhome():
-        return()
+        return
 
     def outputphp(statement):
-        print(statement, phpresult)
+        print(statement, apacheresult)
         # sys.exit(0)
         return returnhome()
 
     def refindall(keyword, dststr):
-        global phpresult
-        phpresult = re.findall(keyword, str(dststr))
+        global apacheresult
+        apacheresult = re.findall(keyword, str(dststr))
 
     def request(dsturl):
         return requests.get(dsturl, verify=False, timeout=3)
 
     def getbynormal(url):
-        global phpresult
+        global apacheresult
         responsenormal = request(url)
-        # print(responsenormal.text)
-        refindall(r"PHP\/\S*", responsenormal.text)
-        if phpresult:
-            outputphp("PHP版本信息（GetByNormal）:")
+        refindall(r"Apache\/\S*", responsenormal.text)
+        if apacheresult:
+            outputphp("Apache版本信息（GetByNormal）:")
         else:
-            refindall(r"PHP\/\S*", responsenormal.headers)
-            if phpresult:
-                outputphp("PHP版本信息（GetByNormal）:")
+            refindall(r"Apache\/\S*", responsenormal.headers)
+            if apacheresult:
+                outputphp("Apache版本信息（GetByNormal）:")
 
     def getbyphpinfo(url):
-        global phpresult
+        global apacheresult
         urlphpinfo = url + '/phpinfo.php'
         print("正在请求：", urlphpinfo)
         responsephpinfo = request(urlphpinfo)
-        refindall(r"PHP Version\s\S\S\S\S\S\S\S", responsephpinfo.text)
-        if phpresult:
-            outputphp("PHP版本信息（GetByphpinfo.php）:")
+        refindall(r"Apache\/\S*", responsephpinfo.text)
+        if apacheresult:
+            outputphp("Apache版本信息（GetByphpinfo.php）:")
         else:
             urlphpinfo = url + '/info.php'
             print("正在请求：", urlphpinfo)
             responsephpinfo = request(urlphpinfo)
-            refindall(r"PHP Version\s\S\S\S\S\S\S\S", responsephpinfo.text)
-            if phpresult:
-                outputphp("PHP版本信息（GetByinfo.php）:")
+            refindall(r"Apache\/\S*", responsephpinfo.text)
+            if apacheresult:
+                outputphp("Apache版本信息（GetByinfo.php）:")
             else:
                 print("无法获得版本信息")
 
@@ -94,4 +93,4 @@ def GetPHPVersion(url):
 # RefactorURL(sys.argv[1])
 # print("正在测试目标站点可访性：", targeturl)
 # IsConnected(targeturl)
-GetPHPVersion(targeturl)
+GetApacheVersion(targeturl)
