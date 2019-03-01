@@ -46,7 +46,7 @@ class GetResponse:
     global targeturl
 
     def request(self, dsturl):
-        return requests.get(dsturl, verify=False, timeout=3,stream=True)
+        return requests.get(dsturl, verify=False, timeout=3, stream=True)
 
     def getbynormaltext(self):
         return self.request(targeturl).text
@@ -119,9 +119,13 @@ class GetVersion:
                         self.outputphp(
                             "PHP版本信息（GetByinfo.php）:", version['php'])
                     else:
-                        version['php'] = self.refindall("PHP\/\S\S\S\S\S\S*",requests.head(targeturl).headers) #request.get默认只展示302重定向之后的200页面，但是有一种情况 php 信息只存在于302页面的 header 字段
+                        # request.get默认只展示302重定向之后的200页面，但是有一种情况 php
+                        # 信息只存在于302页面的 header 字段
+                        version['php'] = self.refindall(
+                            r"PHP\/\S\S\S\S\S\S*", requests.head(targeturl).headers)
                         if version['php']:
-                            self.outputphp("PHP版本信息（GetBy302Page）:", version['php'])
+                            self.outputphp(
+                                "PHP版本信息（GetBy302Page）:", version['php'])
 
     def getapacheversion(self):
         version['tomcat'] = self.refindall(
@@ -204,10 +208,11 @@ class GetVersion:
         self.getnginxversion()
         self.getapacheversion()
 
+
 if __name__ == '__main__':
     checkurl = IsUrlOk()
     checkurl.isurlok(targeturl)
     Jewel = GetVersion()
     Jewel.getallversion()
-    if version['php']==version['tomcat']==version['tomcat'] == version['php']==[]:
+    if version['php'] == version['tomcat'] == version['tomcat'] == version['php'] == []:
         print("无法探测到任何版本信息，请手工复验")
