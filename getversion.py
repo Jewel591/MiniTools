@@ -1,6 +1,4 @@
 
-# import GetApacheVersion
-# import GetPHPVersion
 import requests
 import re
 import sys
@@ -8,11 +6,8 @@ import sys
 from requests.packages.urllib3.exceptions import InsecureRequestWarning
 requests.packages.urllib3.disable_warnings(InsecureRequestWarning)
 
-tomcatversion = [""]
-nginxversion = [""]
-apacheversion = [""]
-phpversion = [""]
 targeturl = sys.argv[1]
+version = {'php': '', 'nginx': '', 'apache': '', 'tomcat': ''}
 
 
 class IsUrlOk():
@@ -36,6 +31,7 @@ class IsUrlOk():
         global connected
         try:
             requests.get(url, verify=False, timeout=3)
+            print("目标站点可达...")
         except IOError:
             print("无法访问站点...")
             sys.exit(0)
@@ -49,14 +45,14 @@ class IsUrlOk():
 class GetResponse:
     global targeturl
 
-    def request(self,dsturl):
-        return requests.get(dsturl, verify=False, timeout=3)
+    def request(self, dsturl):
+        return requests.get(dsturl, verify=False, timeout=3,stream=True)
 
     def getbynormaltext(self):
-        return self.request(targeturl)
+        return self.request(targeturl).text
 
     def getbynormalheaders(self):
-        return self.request(targeturl).headers
+        return str(self.request(targeturl).headers)
 
     def getby404text(self):
         url404 = targeturl + '/asdf'  # asdf.html 有些服务器会响应不同的内容所以不要用
@@ -64,7 +60,7 @@ class GetResponse:
 
     def getby404headers(self):
         url404 = targeturl + '/asdf'
-        return self.request(url404).headers
+        return str(self.request(url404).headers)
 
     def getbyphpinfo(self):
         urlphpinfo = targeturl + '/phpinfo.php'
@@ -81,12 +77,13 @@ class GetResponse:
     def getbyPut(self):
         return requests.put(targeturl, verify=False).text
 
+
 class GetVersion:
 
     def returnhome(self):
         return()
 
-    def outputphp(self,statement,xversion):
+    def outputphp(self, statement, xversion):
         print(statement, xversion)
         # sys.exit(0)
         return self.returnhome()
@@ -98,83 +95,119 @@ class GetVersion:
         return requests.get(dsturl, verify=False, timeout=3)
 
     def getphpversion(self):
-        global phpversion
-        phpversion = self.refindall("PHP\/\S*", GetResponse.getbynormalheaders(self))
-        if phpversion:
-            self.outputphp("PHP版本信息（GetByNormal）:",phpversion)
+        version['php'] = self.refindall(
+            r"PHP\/\S*", GetResponse.getbynormalheaders(self))
+        if version['php']:
+            self.outputphp("PHP版本信息（GetByNormal）:", version['php'])
         else:
-            phpversion = self.refindall("PHP\/\S*", GetResponse.getbynormaltext(self))
-            if phpversion:
-                self.outputphp("PHP版本信息（GetByNormal）:", phpversion)
+            version['php'] = self.refindall(
+                r"PHP\/\S*", GetResponse.getbynormaltext(self))
+            # print(GetResponse.getbynormaltext(self))
+            if version['php']:
+                self.outputphp("PHP版本信息（GetByNormal）:", version['php'])
             else:
-                phpversion = self.refindall("PHP Version\s\S\S\S\S\S\S\S", GetResponse().getbyphpinfo())
-                if phpversion:
-                    self.outputphp("PHP版本信息（GetByphpinfo.php）:", phpversion)
+                version['php'] = self.refindall(
+                    r"PHP Version\s\S\S\S\S\S\S\S",
+                    GetResponse().getbyphpinfo())
+                if version['php']:
+                    self.outputphp(
+                        "PHP版本信息（GetByphpinfo.php）:", version['php'])
                 else:
-                    phpversion = self.refindall("PHP Version\s\S\S\S\S\S\S\S", GetResponse().getbyinfo())
-                    if phpversion:
-                        self.outputphp("PHP版本信息（GetByinfo.php）:", phpversion)
+                    version['php'] = self.refindall(
+                        r"PHP Version\s\S\S\S\S\S\S\S", GetResponse().getbyinfo())
+                    if version['php']:
+                        self.outputphp(
+                            "PHP版本信息（GetByinfo.php）:", version['php'])
+                    else:
+                        version['php'] = self.refindall("PHP\/\S\S\S\S\S\S*",requests.head(targeturl).headers) #request.get默认只展示302重定向之后的200页面，但是有一种情况 php 信息只存在于302页面的 header 字段
+                        if version['php']:
+                            self.outputphp("PHP版本信息（GetBy302Page）:", version['php'])
 
     def getapacheversion(self):
-        global apacheversion
-        apacheversion = self.refindall("Apache\/\S*", GetResponse.getbynormalheaders(self))
-        if apacheversion:
-            self.outputphp("Apache版本信息（GetByNormal）:",apacheversion)
+        version['tomcat'] = self.refindall(
+            r"Apache\/\S*", GetResponse.getbynormalheaders(self))
+        if version['tomcat']:
+            self.outputphp("Apache版本信息（GetByNormal）:", version['tomcat'])
         else:
-            apacheversion = self.refindall("Apache\/\S*", GetResponse.getbynormaltext(self))
-            if apacheversion:
-                self.outputphp("Apache版本信息（GetByNormal）:", apacheversion)
+            version['tomcat'] = self.refindall(
+                r"Apache\/\S*", GetResponse.getbynormaltext(self))
+            if version['tomcat']:
+                self.outputphp("Apache版本信息（GetByNormal）:", version['tomcat'])
             else:
-                apacheversion = self.refindall("Apache\/\S*", GetResponse().getbyphpinfo())
-                if apacheversion:
-                    self.outputphp("Apache版本信息（GetByphpinfo.php）:", apacheversion)
+                version['tomcat'] = self.refindall(
+                    r"Apache\/\S*", GetResponse().getbyphpinfo())
+                if version['tomcat']:
+                    self.outputphp(
+                        "Apache版本信息（GetByphpinfo.php）:", version['tomcat'])
                 else:
-                    apacheversion = self.refindall("Apache\/\S*", GetResponse().getbyinfo())
-                    if phpversion:
-                        self.outputphp("Apache版本信息（GetByinfo.php）:", apacheversion)
+                    version['tomcat'] = self.refindall(
+                        r"Apache\/\S*", GetResponse().getbyinfo())
+                    if version['tomcat']:
+                        self.outputphp(
+                            "Apache版本信息（GetByinfo.php）:", version['tomcat'])
 
     def getnginxversion(self):
-        global nginxversion
-        nginxversion = self.refindall("PHP\/\S*", GetResponse.getbynormalheaders(self))
-        if nginxversion:
-            self.outputphp("Nginx版本信息（GetByNormal）:",nginxversion)
+        version['php'] = self.refindall(
+            r"nginx\/\S\S\S\S\S*",
+            GetResponse.getbynormalheaders(self))
+        if version['php']:
+            self.outputphp("Nginx版本信息（GetByNormal）:", version['php'])
         else:
-            nginxversion = self.refindall("PHP\/\S*", GetResponse.getbynormaltext(self))
-            if nginxversion:
-                self.outputphp("Nginx版本信息（GetByNormal）:", nginxversion)
+            version['php'] = self.refindall(
+                r"nginx\/\S\S\S\S\S*",
+                GetResponse.getbynormaltext(self))
+            if version['php']:
+                self.outputphp("Nginx版本信息（GetByNormal）:", version['php'])
             else:
-                nginxversion = self.refindall("PHP Version\s\S\S\S\S\S\S\S", GetResponse().getbyphpinfo())
-                if nginxversion:
-                    self.outputphp("Nginx版本信息（GetByphpinfo.php）:", nginxversion)
+                version['php'] = self.refindall(
+                    r"nginx\/\S\S\S\S\S*", GetResponse().getbyphpinfo())
+                if version['php']:
+                    self.outputphp(
+                        "Nginx版本信息（GetByphpinfo.php）:", version['php'])
                 else:
-                    nginxversion = self.refindall("PHP Version\s\S\S\S\S\S\S\S", GetResponse().getbyinfo())
-                    if phpversion:
-                        self.outputphp("Nginx版本信息（GetByinfo.php）:", nginxversion)
-
+                    version['php'] = self.refindall(
+                        r"nginx\/\S\S\S\S\S*", GetResponse().getbyinfo())
+                    if version['php']:
+                        self.outputphp(
+                            "Nginx版本信息（GetByinfo.php）:", version['php'])
 
     def gettomcatversion(self):
-        global tomcatversion
-        tomcatversion = self.refindall("Apache Tomcat\S\S\S\S\S\S\S", GetResponse.getby404headers(self))
-        if tomcatversion:
-            self.outputphp("Tomcat版本信息（GetBy404）:",tomcatversion)
+        version['tomcat'] = self.refindall(
+            r"Apache Tomcat\S\S\S\S\S\S\S",
+            GetResponse.getby404headers(self))
+        if version['tomcat']:
+            self.outputphp("Tomcat版本信息（GetBy404）:", version['tomcat'])
         else:
-            tomcatversion = self.refindall("Apache Tomcat\S\S\S\S\S\S\S", GetResponse.getby404text(self))
-            if tomcatversion:
-                self.outputphp("Tomcat版本信息（GetBy404）:", tomcatversion)
+            version['tomcat'] = self.refindall(
+                r"Apache Tomcat\S\S\S\S\S\S\S",
+                GetResponse.getby404text(self))
+            if version['tomcat']:
+                self.outputphp("Tomcat版本信息（GetBy404）:", version['tomcat'])
             else:
-                tomcatversion = self.refindall("Apache Tomcat\S\S\S\S\S\S\S", GetResponse().getbyrange())#因为getbyrange（）中没有使用 self.xxx，所以不需要传递 self
-                if tomcatversion:
-                    self.outputphp("Tomcat版本信息（GetByBadRange）:", tomcatversion)
+                version['tomcat'] = self.refindall(
+                    r"Apache Tomcat\S\S\S\S\S\S\S",
+                    GetResponse().getbyrange())  # 因为getbyrange（）中没有使用 self.xxx，所以不需要传递 self
+                if version['tomcat']:
+                    self.outputphp(
+                        "Tomcat版本信息（GetByBadRange）:",
+                        version['tomcat'])
                 else:
-                    tomcatversion = self.refindall("Apache Tomcat\S\S\S\S\S\S\S", GetResponse().getbyPut())
-                    if tomcatversion:
-                        self.outputphp("Tomcat版本信息（GetByMethonPut）:", tomcatversion)
+                    version['tomcat'] = self.refindall(
+                        r"Apache Tomcat\S\S\S\S\S\S\S", GetResponse().getbyPut())
+                    if version['tomcat']:
+                        self.outputphp(
+                            "Tomcat版本信息（GetByMethonPut）:", version['tomcat'])
 
+    def getallversion(self):
+        self.getphpversion()
+        self.gettomcatversion()
+        self.getnginxversion()
+        self.getapacheversion()
 
-yy = IsUrlOk()
-yy.isurlok(targeturl)
-xx = GetVersion()
-xx.getphpversion()
-xx.getapacheversion()
-xx.gettomcatversion()
-
+if __name__ == '__main__':
+    checkurl = IsUrlOk()
+    checkurl.isurlok(targeturl)
+    Jewel = GetVersion()
+    Jewel.getallversion()
+    if version['php']==version['tomcat']==version['tomcat'] == version['php']==[]:
+        print("无法探测到任何版本信息，请手工复验")
