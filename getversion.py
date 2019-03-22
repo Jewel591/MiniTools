@@ -4,6 +4,7 @@ import re
 import sys
 import threading
 import time
+import subprocess
 # 这两行是为了去除"请求 https 站点取消 ssl 认证时控制台的警告信息"
 from requests.packages.urllib3.exceptions import InsecureRequestWarning
 requests.packages.urllib3.disable_warnings(InsecureRequestWarning)
@@ -18,14 +19,16 @@ version = {'php': '', 'nginx': '', 'apache': '', 'tomcat': ''}
 
 targeturl = ""
 
+
 class IsUrlOk():
     def refactorurl(self, url):
         global targeturl
         if re.findall("http", url):
             return
         else:
-            if re.findall(":443", url):
+            if re.findall(":\d?443", url):
                 targeturl = "https://" + sys.argv[1]
+                print("检测到x443端口,默认尝试 https")
                 return
             else:
                 targeturl = "http://" + sys.argv[1]
@@ -47,18 +50,20 @@ class IsUrlOk():
         except IndexError:
             print("请输入目标站点...")
             sys.exit(0)
-        self.refactorurl(url)
+        self.refactorurl(targeturl)
         print("正在测试目标站点可访性：", targeturl)
         self.isconnected(targeturl)
 
 
 class GetResponse:
     global targeturl
+
     def request(self, dsturl):
         try:
-            return requests.get(dsturl, verify=False, timeout=5, stream=True)
-        except IOError:
-            print("连接超时，默认timeout：5")
+            return requests.get(dsturl, verify=False, timeout=5)
+        except :
+            # print("连接超时，默认timeout:5 url:", dsturl)
+            return ""
 
     def getbynormaltext(self):
         return self.request(targeturl).text
@@ -67,20 +72,26 @@ class GetResponse:
         return str(self.request(targeturl).headers)
 
     def getby404text(self):
-        url404 = targeturl + '/asdf'  # asdf.html 有些服务器会响应不同的内容所以不要用
+        url404 = targeturl + '/as.df'  # asdf.html 有些服务器会响应不同的内容所以不要用
         return self.request(url404).text
 
     def getby404headers(self):
-        url404 = targeturl + '/asdf'
+        url404 = targeturl + '/asd.f'
         return str(self.request(url404).headers)
 
     def getbyphpinfo(self):
         urlphpinfo = targeturl + '/phpinfo.php'
-        return self.request(urlphpinfo).text
+        try:
+            return self.request(urlphpinfo).text
+        except:
+            return self.request(urlphpinfo)
 
     def getbyinfo(self):
         urlinfo = targeturl + '/info.php'
-        return self.request(urlinfo).text
+        try:
+            return self.request(urlinfo).text
+        except:
+            return self.request(urlphpinfo)
 
     def getbyrange(self):
         headers = {'user-agent': 'my-app/0.0.1', 'Range': 'Bytes=1'}
@@ -94,7 +105,9 @@ class GetResponse:
         try:
             return requests.put(targeturl, verify=False, timeout=5).text
         except IOError:
-            print("连接超时，默认timeout：5")
+            # print("目标站点不支持 PUT 方法...")
+            return
+
 
 class GetVersion:
 
@@ -111,9 +124,8 @@ class GetVersion:
         try:
             return requests.get(dsturl, verify=False, timeout=5)
         except IOError:
-            print("连接超时，默认timeout：5")
+            # print("连接超时，默认timeout:5 url:",dsturl)
             return ""
-
 
     def getphpversion(self):
         version['php'] = self.refindall(
@@ -126,7 +138,8 @@ class GetVersion:
             if version['php']:
                 self.outputphp("PHP版本信息（GetByNormal）:", version['php'])
             else:
-                version['php']=self.refindall("PHP\/\S*",GetResponse.getby404headers(self))
+                version['php'] = self.refindall(
+                    r"PHP\/\S*", GetResponse.getby404headers(self))
                 if version['php']:
                     self.outputphp("PHP版本信息（GetBy404Page）:", version['php'])
                 else:
@@ -225,6 +238,13 @@ class GetVersion:
                     if version['tomcat']:
                         self.outputphp(
                             "Tomcat版本信息（GetByMethonPut）:", version['tomcat'])
+                    else:
+                        payload = "curl "+targeturl+" -X PROPFIND -i"
+                        version['tomcat'] = self.refindall(
+                            r"Apache Tomcat\S\S\S\S\S\S\S", subprocess.getoutput(payload))
+                        if version['tomcat']:
+                            self.outputphp(
+                                "Tomcat版本信息（GetByBadMethon）:", version['tomcat'])
 
     def getallversion(self):
         self.getphpversion()
@@ -248,7 +268,12 @@ if __name__ == '__main__':
         t = threading.Thread(target=i)
         t.start()
     timeend = time.time()
-    if len(version['php']) == len(version['apache']) == len(version['tomcat']) == len(version['nginx']) == 0:
-        print("无法探测到任何版本信息，请手工复验")
+    if len(
+        version['php']) == len(
+        version['apache']) == len(
+            version['tomcat']) == len(
+                version['nginx']) == 0:
+        print("无法探测到任何版本信息")
+        print("请手动尝试命令：curl -ki -X PROPFIND "+targeturl)
     print("scanned in " + str(timeend - timestart) + " seconds")
-    print("检索耗时：", timeend - timemiddle)
+    # print("检索耗时：", timeend - timemiddle)
