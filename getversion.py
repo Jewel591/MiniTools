@@ -1,4 +1,3 @@
-
 import requests
 import re
 import sys
@@ -8,7 +7,6 @@ import subprocess
 # 这两行是为了去除"请求 https 站点取消 ssl 认证时控制台的警告信息"
 from requests.packages.urllib3.exceptions import InsecureRequestWarning
 requests.packages.urllib3.disable_warnings(InsecureRequestWarning)
-
 
 version = {'php': '', 'nginx': '', 'apache': '', 'tomcat': ''}
 # keyword = {
@@ -76,7 +74,7 @@ class GetResponse:
         return self.request(url404).text
 
     def getby404headers(self):
-        url404 = targeturl + '/asd.f'
+        url404 = targeturl + '/as.df'
         return str(self.request(url404).headers)
 
     def getbyphpinfo(self):
@@ -89,9 +87,11 @@ class GetResponse:
     def getbyinfo(self):
         urlinfo = targeturl + '/info.php'
         try:
-            return self.request(urlinfo).text
+            resultinfo = str(self.request(urlinfo).headers) + str(self.request(urlinfo).text)
+            return resultinfo
+
         except:
-            return self.request(urlphpinfo)
+            return self.request(urlinfo)
 
     def getbyrange(self):
         headers = {'user-agent': 'my-app/0.0.1', 'Range': 'Bytes=1'}
@@ -156,13 +156,22 @@ class GetVersion:
                             self.outputphp(
                                 "PHP版本信息（GetByinfo.php）:", version['php'])
                         else:
-                            # request.get默认只展示302重定向之后的200页面，但是有一种情况 php
-                            # 信息只存在于302页面的 header 字段
                             version['php'] = self.refindall(
-                                r"PHP\/\S\S\S\S\S\S*", requests.head(targeturl).headers)
+                                r"PHP\/\S*", GetResponse().getbyinfo())
                             if version['php']:
                                 self.outputphp(
-                                    "PHP版本信息（GetBy302Page）:", version['php'])
+                                    "PHP版本信息（GetByinfo.php/404）:", version['php'])
+                                # request.get默认只展示302重定向之后的200页面，但是有一种情况 php
+                                # 信息只存在于302页面的 header 字段
+                            else:
+                                try:
+                                    version['php'] = self.refindall(
+                                        r"PHP\/\S\S\S\S\S\S*", requests.head(targeturl).headers)
+                                except:
+                                    version['php'] =""
+                                if version['php']:
+                                    self.outputphp(
+                                        "PHP版本信息（GetBy302Page）:", version['php'])
 
     def getapacheversion(self):
         version['apache'] = self.refindall(
@@ -238,13 +247,13 @@ class GetVersion:
                     if version['tomcat']:
                         self.outputphp(
                             "Tomcat版本信息（GetByMethonPut）:", version['tomcat'])
-                    else:
-                        payload = "curl "+targeturl+" -X PROPFIND -i"
-                        version['tomcat'] = self.refindall(
-                            r"Apache Tomcat\S\S\S\S\S\S\S", subprocess.getoutput(payload))
-                        if version['tomcat']:
-                            self.outputphp(
-                                "Tomcat版本信息（GetByBadMethon）:", version['tomcat'])
+#                    else:
+#                        payload = "curl "+targeturl+" -X PROPFIND -i"
+#                        version['tomcat'] = self.refindall(
+#                            r"Apache Tomcat\S\S\S\S\S\S\S", subprocess.getoutput(payload))
+#                        if version['tomcat']:
+#                            self.outputphp(
+#                                "Tomcat版本信息（GetByBadMethon）:", version['tomcat'])
 
     def getallversion(self):
         self.getphpversion()
