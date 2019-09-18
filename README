@@ -1,5 +1,4 @@
 Date：20190225
 Author：Jewel591
 
-Get the tomcat/php/nginx/apache version automatically.
-add ..
+自动获取网站的 Tomcat/PHP/Nginx/Apache 的版本信息，结果比 Nmap 准确
