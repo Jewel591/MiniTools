@@ -2,4 +2,4 @@ Date：20190225
 Author：Jewel591
 
 - CheckV.py 自动获取网站的 Tomcat/PHP/Nginx/Apache 的版本信息，结果比 Nmap 准确
-- CheckPhpMyAdmin.py 自动获取 PhpMyAdmin 的版本信息
+- CheckPMA.py 自动获取 PhpMyAdmin 的版本信息
